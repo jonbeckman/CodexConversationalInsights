@@ -1,0 +1,39 @@
+{
+  "name": "codex-conversational-insights",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "cci": "./dist/cci.cjs",
+    "codex-conversational-insights": "./dist/cci.cjs"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "lint:fix:max": "oxlint --fix --fix-suggestions --fix-dangerously",
+    "cci": "tsx bin/cci.ts"
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.0-beta.66",
+    "@notionhq/client": "^5.22.0",
+    "effect": "4.0.0-beta.66"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "esbuild": "^0.28.0",
+    "oxfmt": "^0.52.0",
+    "oxlint": "^1.67.0",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  },
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "packageManager": "pnpm@11.0.9"
+}

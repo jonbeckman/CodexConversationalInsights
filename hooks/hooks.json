@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${PLUGIN_ROOT}/dist/cci.cjs hook user-prompt-submit",
+            "timeout": 120,
+            "statusMessage": "Classifying Codex conversational insight"
+          }
+        ]
+      }
+    ]
+  }
+}

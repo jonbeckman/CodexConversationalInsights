@@ -1,0 +1,22 @@
+{
+  "name": "codex-conversational-insights",
+  "version": "0.1.0",
+  "description": "Capture prompt-level Codex conversational analytics and skill usage into Notion.",
+  "author": {
+    "name": "Jonathan Beckman"
+  },
+  "repository": "https://github.com/jonbeckman/CodexConversationalInsights",
+  "license": "MIT",
+  "keywords": ["codex", "hooks", "analytics", "notion", "skills"],
+  "interface": {
+    "displayName": "Codex Conversational Insights",
+    "shortDescription": "Prompt analytics and skill usage capture for Codex",
+    "longDescription": "Installs a Codex UserPromptSubmit hook that classifies prompts, enriches rows with detected skill usage, and writes the results to a configured Notion database.",
+    "developerName": "Jonathan Beckman",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": "Install prompt-level Codex analytics into Notion",
+    "brandColor": "#111111",
+    "screenshots": []
+  }
+}
