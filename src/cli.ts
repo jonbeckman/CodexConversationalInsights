@@ -4,7 +4,7 @@ import { Command, Flag } from "effect/unstable/cli"
 import { loadConfig } from "./config.js"
 import { backfillTranscripts, runUserPromptSubmitHook, syncStateMetadata } from "./backfill.js"
 import { sessionPathsForAll, sessionPathsForDate } from "./hook-input.js"
-import { installDirect } from "./install-direct.js"
+import { installDirect, uninstallDirect } from "./install-direct.js"
 import { provisionDataSource } from "./notion.js"
 import { runDoctor } from "./doctor.js"
 
@@ -40,6 +40,21 @@ const setupNotionCommand = Command.make(
 
 const installDirectCommand = Command.make("install-direct", {}, () =>
   runJson(() => Promise.resolve(installDirect(loadConfig()))),
+)
+
+const uninstallDirectFlags = {
+  removeState: Flag.boolean("remove-state").pipe(Flag.withDefault(false)),
+}
+
+const uninstallDirectCommand = Command.make(
+  "uninstall-direct",
+  uninstallDirectFlags,
+  ({ removeState }) =>
+    runJson(() => Promise.resolve(uninstallDirect(loadConfig(), { removeState }))),
+)
+
+const uninstallCommand = Command.make("uninstall", uninstallDirectFlags, ({ removeState }) =>
+  runJson(() => Promise.resolve(uninstallDirect(loadConfig(), { removeState }))),
 )
 
 const syncStateMetadataCommand = Command.make(
@@ -90,6 +105,8 @@ const rootCommand = Command.make("cci").pipe(
     doctorCommand,
     setupNotionCommand,
     installDirectCommand,
+    uninstallDirectCommand,
+    uninstallCommand,
     backfillCommand,
     syncStateMetadataCommand,
     hookCommand,

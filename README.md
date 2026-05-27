@@ -1,5 +1,13 @@
 # Codex Conversational Insights
 
+## Agent Install Prompt
+
+Paste this into Codex to install the hook in a new environment:
+
+```text
+Install https://github.com/jonbeckman/CodexConversationalInsights as a Codex UserPromptSubmit hook. Let me know which environment variables I need to set when done. Then we can run the backfill process for one prompt to verify, then the full backfill process.
+```
+
 Codex Conversational Insights is a shareable Codex hook and CLI that captures
 prompt-level coding conversation analytics in Notion. Each row maps to one user
 prompt and records the classification, model, tags, skill usage, transcript
@@ -106,6 +114,19 @@ pnpm cci install-direct
 `${CODEX_HOME:-~/.codex}/hooks/codex-conversational-insights/` and upserts only
 the `UserPromptSubmit` hook in `~/.codex/hooks.json`.
 
+Uninstall a direct local installation:
+
+```bash
+pnpm cci uninstall-direct
+```
+
+This removes hook entries and installed hook files, including legacy prototype
+files, but preserves state and logs. To also remove local state:
+
+```bash
+pnpm cci uninstall-direct --remove-state
+```
+
 For plugin installation, install this repo as a Codex plugin. The plugin
 manifest lives at `.codex-plugin/plugin.json`, and the bundled hook registry
 lives at `hooks/hooks.json`. Put plugin-local configuration in
@@ -158,6 +179,8 @@ pnpm cci backfill --date 2026-05-27 --dry-run --summary
   hook registration, and state path.
 - `setup-notion`: add/validate required Notion schema.
 - `install-direct`: install the direct `~/.codex/hooks.json` hook.
+- `uninstall-direct`: remove the direct hook and installed hook files.
+- `uninstall`: alias for `uninstall-direct`.
 - `backfill --all`: scan all Codex sessions and write or update rows.
 - `backfill --date YYYY-MM-DD`: scan sessions from one date.
 - `sync-state-metadata`: update Notion metadata for known state records.

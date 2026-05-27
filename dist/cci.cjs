@@ -55787,6 +55787,34 @@ function installDirect(config) {
     stopHookCount: registry.hooks.Stop?.length || 0
   };
 }
+function uninstallDirect(config, options = {}) {
+  const hooksJsonPath = import_node_path7.default.join(config.codexHome, "hooks.json");
+  const registry = readHookRegistry(hooksJsonPath);
+  registry.hooks ||= {};
+  const removal = removeMatchingHooks(registry);
+  if (import_node_fs9.default.existsSync(hooksJsonPath)) {
+    import_node_fs9.default.writeFileSync(hooksJsonPath, `${JSON.stringify(registry, null, 2)}
+`, { mode: 420 });
+  }
+  const installedDir = import_node_path7.default.join(config.codexHome, "hooks", "codex-conversational-insights");
+  const removedInstalledDir = import_node_fs9.default.existsSync(installedDir);
+  import_node_fs9.default.rmSync(installedDir, { recursive: true, force: true });
+  const removedLegacyFiles = removeLegacyFiles(config.codexHome);
+  const removedStateDir = Boolean(options.removeState && import_node_fs9.default.existsSync(config.stateDir));
+  if (options.removeState) import_node_fs9.default.rmSync(config.stateDir, { recursive: true, force: true });
+  return {
+    hooksJsonPath,
+    installedDir,
+    removedHookEntries: removal.entries,
+    removedHookGroups: removal.groups,
+    removedInstalledDir,
+    removedLegacyFiles,
+    removedStateDir,
+    stateDir: config.stateDir,
+    userPromptSubmitHookCount: registry.hooks.UserPromptSubmit?.length || 0,
+    stopHookCount: registry.hooks.Stop?.length || 0
+  };
+}
 function readHookRegistry(hooksJsonPath) {
   try {
     return JSON.parse(import_node_fs9.default.readFileSync(hooksJsonPath, "utf8"));
@@ -55824,6 +55852,45 @@ function removeHook(registry, eventName) {
     (group2) => group2.matcher || group2.hooks && group2.hooks.length > 0
   );
   if (registry.hooks[eventName].length === 0) delete registry.hooks[eventName];
+}
+function removeMatchingHooks(registry) {
+  let entries = 0;
+  let groups = 0;
+  for (const eventName of Object.keys(registry.hooks)) {
+    const eventGroups = registry.hooks[eventName] || [];
+    for (const group2 of eventGroups) {
+      const before = group2.hooks?.length || 0;
+      group2.hooks = (group2.hooks || []).filter((hook) => !isConversationalInsightsHook(hook));
+      entries += before - group2.hooks.length;
+    }
+    const beforeGroups = eventGroups.length;
+    registry.hooks[eventName] = eventGroups.filter(
+      (group2) => group2.matcher || group2.hooks && group2.hooks.length > 0
+    );
+    groups += beforeGroups - registry.hooks[eventName].length;
+    if (registry.hooks[eventName].length === 0) delete registry.hooks[eventName];
+  }
+  return { entries, groups };
+}
+function isConversationalInsightsHook(hook) {
+  if (hook.type !== "command") return false;
+  const command = String(hook.command || "");
+  return command.includes("codex-conversational-insights") || command.includes("codex-skill-usage-hook");
+}
+function removeLegacyFiles(codexHome) {
+  const legacyFiles = [
+    "codex-conversational-insights-hook.mjs",
+    "conversational-insights-schema.json",
+    "codex-skill-usage-hook.mjs",
+    "codex-skill-usage-schema.json"
+  ].map((fileName) => import_node_path7.default.join(codexHome, "hooks", fileName));
+  const removed = [];
+  for (const filePath of legacyFiles) {
+    if (!import_node_fs9.default.existsSync(filePath)) continue;
+    import_node_fs9.default.rmSync(filePath, { force: true });
+    removed.push(filePath);
+  }
+  return removed;
 }
 function escapeSingleQuoted(value2) {
   return value2.replace(/'/gu, "'\\''");
@@ -55916,6 +55983,19 @@ var installDirectCommand = Command_exports.make(
   {},
   () => runJson(() => Promise.resolve(installDirect(loadConfig())))
 );
+var uninstallDirectFlags = {
+  removeState: Flag_exports.boolean("remove-state").pipe(Flag_exports.withDefault(false))
+};
+var uninstallDirectCommand = Command_exports.make(
+  "uninstall-direct",
+  uninstallDirectFlags,
+  ({ removeState }) => runJson(() => Promise.resolve(uninstallDirect(loadConfig(), { removeState })))
+);
+var uninstallCommand = Command_exports.make(
+  "uninstall",
+  uninstallDirectFlags,
+  ({ removeState }) => runJson(() => Promise.resolve(uninstallDirect(loadConfig(), { removeState })))
+);
 var syncStateMetadataCommand = Command_exports.make(
   "sync-state-metadata",
   {
@@ -55957,6 +56037,8 @@ var rootCommand = Command_exports.make("cci").pipe(
     doctorCommand,
     setupNotionCommand,
     installDirectCommand,
+    uninstallDirectCommand,
+    uninstallCommand,
     backfillCommand,
     syncStateMetadataCommand,
     hookCommand

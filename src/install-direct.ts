@@ -10,6 +10,19 @@ export interface InstallDirectResult {
   readonly stopHookCount: number
 }
 
+export interface UninstallDirectResult {
+  readonly hooksJsonPath: string
+  readonly installedDir: string
+  readonly removedHookEntries: number
+  readonly removedHookGroups: number
+  readonly removedInstalledDir: boolean
+  readonly removedLegacyFiles: ReadonlyArray<string>
+  readonly removedStateDir: boolean
+  readonly stateDir: string
+  readonly userPromptSubmitHookCount: number
+  readonly stopHookCount: number
+}
+
 export function installDirect(config: AppConfig): InstallDirectResult {
   const sourceCli = path.join(config.repoRoot, "dist", "cci.cjs")
   if (!fs.existsSync(sourceCli)) {
@@ -42,6 +55,41 @@ export function installDirect(config: AppConfig): InstallDirectResult {
     installedCli,
     hooksJsonPath,
     command,
+    userPromptSubmitHookCount: registry.hooks.UserPromptSubmit?.length || 0,
+    stopHookCount: registry.hooks.Stop?.length || 0,
+  }
+}
+
+export function uninstallDirect(
+  config: AppConfig,
+  options: { readonly removeState?: boolean } = {},
+): UninstallDirectResult {
+  const hooksJsonPath = path.join(config.codexHome, "hooks.json")
+  const registry = readHookRegistry(hooksJsonPath)
+  registry.hooks ||= {}
+  const removal = removeMatchingHooks(registry)
+
+  if (fs.existsSync(hooksJsonPath)) {
+    fs.writeFileSync(hooksJsonPath, `${JSON.stringify(registry, null, 2)}\n`, { mode: 0o644 })
+  }
+
+  const installedDir = path.join(config.codexHome, "hooks", "codex-conversational-insights")
+  const removedInstalledDir = fs.existsSync(installedDir)
+  fs.rmSync(installedDir, { recursive: true, force: true })
+
+  const removedLegacyFiles = removeLegacyFiles(config.codexHome)
+  const removedStateDir = Boolean(options.removeState && fs.existsSync(config.stateDir))
+  if (options.removeState) fs.rmSync(config.stateDir, { recursive: true, force: true })
+
+  return {
+    hooksJsonPath,
+    installedDir,
+    removedHookEntries: removal.entries,
+    removedHookGroups: removal.groups,
+    removedInstalledDir,
+    removedLegacyFiles,
+    removedStateDir,
+    stateDir: config.stateDir,
     userPromptSubmitHookCount: registry.hooks.UserPromptSubmit?.length || 0,
     stopHookCount: registry.hooks.Stop?.length || 0,
   }
@@ -101,6 +149,52 @@ function removeHook(
     (group) => group.matcher || (group.hooks && group.hooks.length > 0),
   )
   if (registry.hooks[eventName].length === 0) delete registry.hooks[eventName]
+}
+
+function removeMatchingHooks(registry: {
+  hooks: Record<string, Array<{ matcher?: string; hooks?: any[] }>>
+}): { readonly entries: number; readonly groups: number } {
+  let entries = 0
+  let groups = 0
+  for (const eventName of Object.keys(registry.hooks)) {
+    const eventGroups = registry.hooks[eventName] || []
+    for (const group of eventGroups) {
+      const before = group.hooks?.length || 0
+      group.hooks = (group.hooks || []).filter((hook) => !isConversationalInsightsHook(hook))
+      entries += before - group.hooks.length
+    }
+    const beforeGroups = eventGroups.length
+    registry.hooks[eventName] = eventGroups.filter(
+      (group) => group.matcher || (group.hooks && group.hooks.length > 0),
+    )
+    groups += beforeGroups - registry.hooks[eventName].length
+    if (registry.hooks[eventName].length === 0) delete registry.hooks[eventName]
+  }
+  return { entries, groups }
+}
+
+function isConversationalInsightsHook(hook: { readonly type?: string; readonly command?: string }) {
+  if (hook.type !== "command") return false
+  const command = String(hook.command || "")
+  return (
+    command.includes("codex-conversational-insights") || command.includes("codex-skill-usage-hook")
+  )
+}
+
+function removeLegacyFiles(codexHome: string): ReadonlyArray<string> {
+  const legacyFiles = [
+    "codex-conversational-insights-hook.mjs",
+    "conversational-insights-schema.json",
+    "codex-skill-usage-hook.mjs",
+    "codex-skill-usage-schema.json",
+  ].map((fileName) => path.join(codexHome, "hooks", fileName))
+  const removed: string[] = []
+  for (const filePath of legacyFiles) {
+    if (!fs.existsSync(filePath)) continue
+    fs.rmSync(filePath, { force: true })
+    removed.push(filePath)
+  }
+  return removed
 }
 
 function escapeSingleQuoted(value: string): string {
