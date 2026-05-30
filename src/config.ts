@@ -29,6 +29,7 @@ export interface AppConfig {
   readonly batchClassifierTimeoutMs: number
   readonly notionMaxRetries: number
   readonly notionMinRequestIntervalMs: number
+  readonly includeAutomations: boolean
   readonly envFiles: ReadonlyArray<string>
 }
 
@@ -85,6 +86,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       merged.CODEX_CONVERSATIONAL_INSIGHTS_NOTION_MIN_REQUEST_INTERVAL_MS,
       350,
     ),
+    includeAutomations: parseBoolean(
+      merged.CODEX_CONVERSATIONAL_INSIGHTS_INCLUDE_AUTOMATIONS,
+      false,
+    ),
     envFiles,
   }
 }
@@ -102,6 +107,14 @@ function positiveInt(value: string | undefined, fallback: number): number {
 function nonNegativeInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value || "", 10)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback
+}
+
+function parseBoolean(value: string | undefined, fallback: boolean): boolean {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+  if (!normalized) return fallback
+  return ["1", "true", "yes", "on"].includes(normalized)
 }
 
 export function legacyStatePath(env: NodeJS.ProcessEnv = process.env): string {

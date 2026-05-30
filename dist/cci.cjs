@@ -54595,6 +54595,10 @@ function loadConfig(env = process.env) {
       merged.CODEX_CONVERSATIONAL_INSIGHTS_NOTION_MIN_REQUEST_INTERVAL_MS,
       350
     ),
+    includeAutomations: parseBoolean(
+      merged.CODEX_CONVERSATIONAL_INSIGHTS_INCLUDE_AUTOMATIONS,
+      false
+    ),
     envFiles
   };
 }
@@ -54609,6 +54613,11 @@ function positiveInt(value2, fallback) {
 function nonNegativeInt(value2, fallback) {
   const parsed = Number.parseInt(value2 || "", 10);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+function parseBoolean(value2, fallback) {
+  const normalized = String(value2 || "").trim().toLowerCase();
+  if (!normalized) return fallback;
+  return ["1", "true", "yes", "on"].includes(normalized);
 }
 function legacyStatePath(env = process.env) {
   return import_node_path2.default.join(
@@ -54899,8 +54908,14 @@ function parseHookInput(config, stdin = readStdin(), env = process.env) {
       env.CODEX_SESSION_PATH,
       latestSessionPath(config)
     ),
+    automationId: firstString(parsed.automation_id, parsed.automationId, env.CODEX_AUTOMATION_ID),
     notionTags: config.notionTags
   };
+}
+function isCodexAutomationInput(input) {
+  if (input.automationId) return true;
+  const prompt = input.prompt.trim();
+  return /^<heartbeat>\s*<automation_id>[\s\S]*?<\/automation_id>/u.test(prompt) || /^Automation:\s+[\s\S]*?\bAutomation ID:/u.test(prompt);
 }
 function parseInput(stdin) {
   if (!stdin.trim()) return {};
@@ -55498,12 +55513,26 @@ async function runUserPromptSubmitHook(config, options = {}) {
     return { status: "skipped", reason: "child_classifier_session" };
   }
   const input = parseHookInput(config);
+  if (!config.includeAutomations && isCodexAutomationInput(input)) {
+    logEvent(config, "skip", {
+      reason: "codex_automation",
+      automationId: input.automationId || automationIdFromPrompt(input.prompt)
+    });
+    return {
+      status: "skipped",
+      reason: "codex_automation",
+      automationId: input.automationId || automationIdFromPrompt(input.prompt)
+    };
+  }
   if (input.transcriptPath) await captureSkills(config, input.transcriptPath, options);
   if (!input.prompt) {
     logEvent(config, "skip", { reason: "no_prompt" });
     return { status: "skipped", reason: "no_prompt" };
   }
   return capturePrompt(config, input, options);
+}
+function automationIdFromPrompt(prompt) {
+  return prompt.match(/<automation_id>([^<]+)<\/automation_id>/u)?.[1]?.trim() || "";
 }
 async function capturePrompt(config, input, options = {}) {
   const promptHash = hashPrompt(input.prompt);
