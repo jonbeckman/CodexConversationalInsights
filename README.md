@@ -142,6 +142,15 @@ The child process receives `CODEX_CONVERSATIONAL_INSIGHTS_CHILD=1`. If a hook is
 invoked inside that child session, it exits before classification or Notion
 writes, preventing recursive hook calls.
 
+Codex automation prompts are skipped by default. The hook treats
+`<heartbeat><automation_id>...` wrappers, explicit automation IDs, and the
+legacy `Automation: ... Automation ID: ...` header as automation runs. To
+capture automation prompts intentionally, set:
+
+```bash
+CODEX_CONVERSATIONAL_INSIGHTS_INCLUDE_AUTOMATIONS=1
+```
+
 Plugin installs store state and logs in `${PLUGIN_DATA}`. Direct installs store
 state and logs in `${CODEX_HOME:-~/.codex}/conversational-insights`. Plugin
 state auto-migrates once from the legacy direct state file when plugin state is

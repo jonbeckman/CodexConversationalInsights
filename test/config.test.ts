@@ -29,4 +29,23 @@ describe("loadConfig", () => {
     expect(config.notionDataSourceId).toBe("from-process")
     expect(config.notionTags).toEqual(["Consensys", "Work"])
   })
+
+  test("skips Codex automation captures by default", () => {
+    const config = loadConfig({
+      CODEX_HOME: "/tmp/codex-home",
+      PATH: process.env.PATH,
+    })
+
+    expect(config.includeAutomations).toBe(false)
+  })
+
+  test("can opt in to Codex automation captures", () => {
+    const config = loadConfig({
+      CODEX_CONVERSATIONAL_INSIGHTS_INCLUDE_AUTOMATIONS: "1",
+      CODEX_HOME: "/tmp/codex-home",
+      PATH: process.env.PATH,
+    })
+
+    expect(config.includeAutomations).toBe(true)
+  })
 })

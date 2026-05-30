@@ -1,6 +1,6 @@
 import type { AppConfig } from "./config.js"
 import { classifyPrompt, classifyPromptsBatch } from "./codex-runner.js"
-import { parseHookInput } from "./hook-input.js"
+import { isCodexAutomationInput, parseHookInput } from "./hook-input.js"
 import { logEvent } from "./logging.js"
 import { createInsightPage, updateInsightPage } from "./notion.js"
 import { buildInsightRow, buildSkillPatch, rowToStateRecord } from "./rows.js"
@@ -37,12 +37,27 @@ export async function runUserPromptSubmitHook(
     return { status: "skipped", reason: "child_classifier_session" }
   }
   const input = parseHookInput(config)
+  if (!config.includeAutomations && isCodexAutomationInput(input)) {
+    logEvent(config, "skip", {
+      reason: "codex_automation",
+      automationId: input.automationId || automationIdFromPrompt(input.prompt),
+    })
+    return {
+      status: "skipped",
+      reason: "codex_automation",
+      automationId: input.automationId || automationIdFromPrompt(input.prompt),
+    }
+  }
   if (input.transcriptPath) await captureSkills(config, input.transcriptPath, options)
   if (!input.prompt) {
     logEvent(config, "skip", { reason: "no_prompt" })
     return { status: "skipped", reason: "no_prompt" }
   }
   return capturePrompt(config, input, options)
+}
+
+function automationIdFromPrompt(prompt: string): string {
+  return prompt.match(/<automation_id>([^<]+)<\/automation_id>/u)?.[1]?.trim() || ""
 }
 
 export async function capturePrompt(

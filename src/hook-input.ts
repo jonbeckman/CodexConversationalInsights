@@ -34,8 +34,18 @@ export function parseHookInput(
       env.CODEX_SESSION_PATH,
       latestSessionPath(config),
     ),
+    automationId: firstString(parsed.automation_id, parsed.automationId, env.CODEX_AUTOMATION_ID),
     notionTags: config.notionTags,
   }
+}
+
+export function isCodexAutomationInput(input: HookInput): boolean {
+  if (input.automationId) return true
+  const prompt = input.prompt.trim()
+  return (
+    /^<heartbeat>\s*<automation_id>[\s\S]*?<\/automation_id>/u.test(prompt) ||
+    /^Automation:\s+[\s\S]*?\bAutomation ID:/u.test(prompt)
+  )
 }
 
 function parseInput(stdin: string): Record<string, unknown> {

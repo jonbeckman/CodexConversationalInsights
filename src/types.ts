@@ -37,6 +37,7 @@ export interface HookInput {
   readonly promptModel: string
   readonly transcriptPath: string
   readonly source?: string
+  readonly automationId?: string
   readonly notionTags?: ReadonlyArray<string>
 }
 
